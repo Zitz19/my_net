@@ -6,24 +6,22 @@
 
 Net::Net(Config config)
     : hostname_(config.name_)
-    , unicast_peer_(boost::asio::ip::make_address(config.ip_), config.port_)
-    , root_peer_(boost::asio::ip::address_v4::any(), config.port_)
+    , peer_(boost::asio::ip::address_v4::any(), config.port_)
 {
     std::list<boost::asio::ip::address> roots;
     for (std::string addr : config.roots_)
     {
         roots.push_back(boost::asio::ip::make_address(addr));
     }
-    root_peer_.SetRemoteEndpoints(roots, config.port_);
+    peer_.SetRemoteEndpoints(roots, config.port_);
     SetupHandler();
 }
 
 void Net::HandleReceive(const boost::system::error_code &error, size_t bytes_received)
 {
-    std::cout << "HandleReceive - bytes received: " << bytes_received << std::endl;
     if (!error.failed() && bytes_received > 0)
     {
-        const std::array<char, 1024> &received_data = unicast_peer_.GetReceiveBuffer();
+        const std::array<char, 1024> &received_data = peer_.GetReceiveBuffer();
         std::string received_message{
             received_data.begin(),
             received_data.begin() + bytes_received
@@ -38,7 +36,7 @@ void Net::HandleReceive(const boost::system::error_code &error, size_t bytes_rec
             std::cout.write(received_data.data(), bytes_received);
             std::cout << '\n' << std::flush;
         }
-        unicast_peer_.Receive();
+        peer_.Receive();
     }
 }
 
@@ -48,16 +46,21 @@ void Net::SetupHandler()
                                   this,
                                   boost::asio::placeholders::error,
                                   boost::asio::placeholders::bytes_transferred);
-    unicast_peer_.SetupReceiver(handler);
+    peer_.SetupReceiver(handler);
 }
 
 void Net::Receive()
 {
-    std::cout << "Receiving\n";
-    boost::asio::io_context::work idle_work(unicast_peer_.io_context_);
-    thread_ = std::thread([this] { unicast_peer_.RunContext(); });
-    unicast_peer_.Receive();
-    std::cout << "Receiver exit\n";
+    boost::asio::io_context::work idle_work(peer_.io_context_);
+    thread_ = std::thread([this] { peer_.RunContext(); });
+    peer_.Receive();
+}
+
+void Net::Stop()
+{
+    peer_.StopReceive();
+    thread_.join();
+
 }
 
 void Net::Send()
@@ -66,7 +69,7 @@ void Net::Send()
     std::string name = hostname_;
     std::string message = "<connected>";
     std::string buffer = name + ": " + message;
-    root_peer_.Send(boost::asio::buffer(buffer));
+    peer_.Send(boost::asio::buffer(buffer));
     message.clear();
     while (std::getline(std::cin, message))
     {
@@ -77,7 +80,7 @@ void Net::Send()
             is_end = true;
         }
         buffer = name + ": " + message;
-        root_peer_.Send(boost::asio::buffer(buffer));
+        peer_.Send(boost::asio::buffer(buffer));
         if (is_end)
         {
             return;

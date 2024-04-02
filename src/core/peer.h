@@ -12,7 +12,7 @@ using boost::asio::ip::udp;
 class Peer
 {
 private:
-    udp::endpoint remote_endpoint_;
+    std::list<udp::endpoint> remote_endpoints_;
     std::array<char, 1024> receiving_buffer_;
     Handler handler_;
 
@@ -25,25 +25,13 @@ protected:
 
 public:
     Peer(boost::asio::ip::address address, uint16_t port);
-    Peer(boost::asio::ip::address address, uint16_t port, udp::endpoint remote_endpoint);
-    Peer(boost::asio::ip::address address, uint16_t port, boost::asio::ip::address remote_address);
 
-    void SetRemoteEndpoint(boost::asio::ip::address remote_address, uint16_t port);
+    void SetRemoteEndpoints(std::list<boost::asio::ip::address> &remote_addresses, uint16_t port);
+    void Send(boost::asio::mutable_buffer send_data);
 
     const std::array<char, 1024> &GetReceiveBuffer();
     void SetupReceiver(Handler handler);
     void Receive();
+    void StopReceive();
     void RunContext();
-};
-
-class MultiPeer: public Peer
-{
-private:
-    std::list<udp::endpoint> remote_endpoints_;
-
-public:
-    MultiPeer(boost::asio::ip::address address, uint16_t port);
-
-    void SetRemoteEndpoints(std::list<boost::asio::ip::address> &remote_addresses, uint16_t port);
-    void Send(boost::asio::mutable_buffer send_data);
 };

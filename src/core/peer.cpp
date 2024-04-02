@@ -12,21 +12,12 @@ Peer::Peer(boost::asio::ip::address address, uint16_t port)
     socket_.bind(listen_endpoint_);
 }
 
-Peer::Peer(boost::asio::ip::address address, uint16_t port, udp::endpoint remote_endpoint)
-    : Peer(address, port)
+void Peer::SetRemoteEndpoints(std::list<boost::asio::ip::address> &remote_addresses, uint16_t port)
 {
-    remote_endpoint_ = remote_endpoint;
-}
-
-Peer::Peer(boost::asio::ip::address address, uint16_t port, boost::asio::ip::address remote_address)
-    : Peer(address, port)
-{
-    remote_endpoint_ = udp::endpoint{remote_address, port};
-}
-
-void Peer::SetRemoteEndpoint(boost::asio::ip::address remote_address, uint16_t port)
-{
-    remote_endpoint_ = udp::endpoint{remote_address, port};
+    for (boost::asio::ip::address addr : remote_addresses)
+    {
+        remote_endpoints_.push_back(udp::endpoint{addr, port});
+    }
 }
 
 const std::array<char, 1024> &Peer::GetReceiveBuffer()
@@ -41,11 +32,15 @@ void Peer::SetupReceiver(Handler handler)
 
 void Peer::Receive()
 {
-    std::cout << "Receive\n";
     socket_.async_receive(
         boost::asio::buffer(receiving_buffer_),
         boost::bind(handler_, boost::asio::placeholders::error, boost::asio::placeholders::bytes_transferred)
     );
+}
+
+void Peer::StopReceive()
+{
+    socket_.close();
 }
 
 void Peer::RunContext()
@@ -53,19 +48,7 @@ void Peer::RunContext()
     io_context_.run();
 }
 
-MultiPeer::MultiPeer(boost::asio::ip::address address, uint16_t port)
-    : Peer(address, port)
-{}
-
-void MultiPeer::SetRemoteEndpoints(std::list<boost::asio::ip::address> &remote_addresses, uint16_t port)
-{
-    for (boost::asio::ip::address addr : remote_addresses)
-    {
-        remote_endpoints_.push_back(udp::endpoint{addr, port});
-    }
-}
-
-void MultiPeer::Send(boost::asio::mutable_buffer send_data)
+void Peer::Send(boost::asio::mutable_buffer send_data)
 {
     for (auto& remote_endpoint : remote_endpoints_)
     {
@@ -74,8 +57,4 @@ void MultiPeer::Send(boost::asio::mutable_buffer send_data)
             remote_endpoint
         );
     }
-    socket_.send_to(
-            boost::asio::buffer(send_data, max_datagram_size_),
-            listen_endpoint_
-        );
 }

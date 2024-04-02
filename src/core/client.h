@@ -9,8 +9,7 @@ class Net
 {
 private:
     std::string hostname_;
-    Peer unicast_peer_;
-    MultiPeer root_peer_;
+    Peer peer_;
     std::thread thread_;
 
 public:
@@ -19,5 +18,6 @@ public:
     void SetupHandler();
     void HandleReceive(const boost::system::error_code &error, size_t bytes_received);
     void Receive();
+    void Stop();
     void Send();
 };
