@@ -17,7 +17,7 @@ public:
     Net(Config config);
 
     void SetupHandler();
-    void HandleReceive(const boost::system::error_code &error, size_t bytes_received, const std::array<char, 1024> &received_data);
+    void HandleReceive(const boost::system::error_code &error, size_t bytes_received);
     void Receive();
     void Send();
 };

@@ -44,33 +44,7 @@ void Peer::Receive()
     std::cout << "Receive\n";
     socket_.async_receive(
         boost::asio::buffer(receiving_buffer_),
-        // boost::bind(handler_, boost::asio::placeholders::error, boost::asio::placeholders::bytes_transferred)
-        [this](const boost::system::error_code& error_code,
-        std::size_t bytes_received)
-        {
-            std::cout << "Handler\n";
-            if (!error_code.failed() && bytes_received > 0)
-            {
-                std::string received_message{
-                    receiving_buffer_.begin(),
-                    receiving_buffer_.begin() + bytes_received
-                };
-                if (received_message.find("broadcast") != std::string::npos)
-                { 
-                    std::cout.write("INFO: broadcast message was received", 36);
-                    std::cout << '\n' << std::flush;
-                }
-                else
-                {
-                    std::cout.write(receiving_buffer_.data(), bytes_received);
-                    std::cout << '\n' << std::flush;
-                }
-                Receive();
-            } else
-            {
-                std::cout << error_code.message() << std::endl;
-            }
-        }
+        boost::bind(handler_, boost::asio::placeholders::error, boost::asio::placeholders::bytes_transferred)
     );
 }
 

@@ -7,7 +7,7 @@
 Net::Net(Config config)
     : hostname_(config.name_)
     , unicast_peer_(boost::asio::ip::make_address(config.ip_), config.port_)
-    , root_peer_(boost::asio::ip::make_address(config.ip_), config.port_)
+    , root_peer_(boost::asio::ip::address_v4::any(), config.port_)
 {
     std::list<boost::asio::ip::address> roots;
     for (std::string addr : config.roots_)
@@ -18,11 +18,12 @@ Net::Net(Config config)
     SetupHandler();
 }
 
-void Net::HandleReceive(const boost::system::error_code &error, size_t bytes_received, const std::array<char, 1024> &received_data)
+void Net::HandleReceive(const boost::system::error_code &error, size_t bytes_received)
 {
-    std::cout << "HandleReceive\n";
+    std::cout << "HandleReceive - bytes received: " << bytes_received << std::endl;
     if (!error.failed() && bytes_received > 0)
     {
+        const std::array<char, 1024> &received_data = unicast_peer_.GetReceiveBuffer();
         std::string received_message{
             received_data.begin(),
             received_data.begin() + bytes_received
@@ -46,8 +47,7 @@ void Net::SetupHandler()
     Handler handler = boost::bind(&Net::HandleReceive,
                                   this,
                                   boost::asio::placeholders::error,
-                                  boost::asio::placeholders::bytes_transferred,
-                                  unicast_peer_.GetReceiveBuffer());
+                                  boost::asio::placeholders::bytes_transferred);
     unicast_peer_.SetupReceiver(handler);
 }
 
