@@ -22,7 +22,7 @@ int main()
         switch (choice)
         {
         case 0:
-            // r.join();
+            client.Stop();
             return 0;
         case 1:
             client.Send();
