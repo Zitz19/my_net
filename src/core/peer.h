@@ -16,8 +16,9 @@ private:
     std::array<char, 1024> receiving_buffer_;
     Handler handler_;
 
-protected:
+public:
     boost::asio::io_context io_context_;
+protected:
     udp::socket socket_;
     udp::endpoint listen_endpoint_;
     const std::size_t max_datagram_size_ = 1024;
@@ -32,6 +33,7 @@ public:
     const std::array<char, 1024> &GetReceiveBuffer();
     void SetupReceiver(Handler handler);
     void Receive();
+    void RunContext();
 };
 
 class MultiPeer: public Peer

@@ -6,7 +6,7 @@
 
 Net::Net(Config config)
     : hostname_(config.name_)
-    , unicast_peer_(boost::asio::ip::address_v4::any(), config.port_)
+    , unicast_peer_(boost::asio::ip::make_address(config.ip_), config.port_)
     , root_peer_(boost::asio::ip::make_address(config.ip_), config.port_)
 {
     std::list<boost::asio::ip::address> roots;
@@ -54,6 +54,8 @@ void Net::SetupHandler()
 void Net::Receive()
 {
     std::cout << "Receiving\n";
+    boost::asio::io_context::work idle_work(unicast_peer_.io_context_);
+    thread_ = std::thread([this] { unicast_peer_.RunContext(); });
     unicast_peer_.Receive();
     std::cout << "Receiver exit\n";
 }

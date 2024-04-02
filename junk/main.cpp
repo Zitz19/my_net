@@ -5,7 +5,7 @@
 #include <boost/asio.hpp>
 #include <boost/asio/thread_pool.hpp>
 
-#include "configParser.hpp"
+#include "config/config.h"
 
 class Peer
 {
@@ -19,7 +19,7 @@ private:
 public:
     Peer(
         boost::asio::io_context& io_context,
-        NetConfig net_config)
+        Config net_config)
         : socket_{io_context}
         , endpoint_{boost::asio::ip::make_address(net_config.ip_), net_config.port_}
         , name_{net_config.name_}
@@ -128,7 +128,7 @@ int main(int argc, char* argv[])
 
     boost::asio::thread_pool thread_pool(2);
 
-    NetConfig net_config = NetConfig::ParseConfig("config.json");
+    Config net_config = Config::ParseConfig("config.json");
 
     boost::asio::io_context io_context;
     Peer peer(io_context, net_config);

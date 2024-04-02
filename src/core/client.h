@@ -11,6 +11,7 @@ private:
     std::string hostname_;
     Peer unicast_peer_;
     MultiPeer root_peer_;
+    std::thread thread_;
 
 public:
     Net(Config config);

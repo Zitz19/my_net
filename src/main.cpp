@@ -10,7 +10,7 @@ int main()
 {
     std::cout << "Hello from StudNet!\n";
     Net client{Config::ParseConfig("config.json")};
-    std::thread r([&] { client.Receive(); });
+    client.Receive();
 
     while (true)
     {
@@ -22,7 +22,7 @@ int main()
         switch (choice)
         {
         case 0:
-            r.join();
+            // r.join();
             return 0;
         case 1:
             client.Send();

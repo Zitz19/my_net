@@ -7,7 +7,7 @@ Peer::Peer(boost::asio::ip::address address, uint16_t port)
     : socket_{io_context_}
     , listen_endpoint_{address, port}
 {
-    socket_.open(listen_endpoint_.protocol());
+    socket_.open(boost::asio::ip::udp::v4());
     socket_.set_option(udp::socket::reuse_address(true));
     socket_.bind(listen_endpoint_);
 }
@@ -48,6 +48,7 @@ void Peer::Receive()
         [this](const boost::system::error_code& error_code,
         std::size_t bytes_received)
         {
+            std::cout << "Handler\n";
             if (!error_code.failed() && bytes_received > 0)
             {
                 std::string received_message{
@@ -59,15 +60,22 @@ void Peer::Receive()
                     std::cout.write("INFO: broadcast message was received", 36);
                     std::cout << '\n' << std::flush;
                 }
-                else if (received_message.find("test") == std::string::npos)
+                else
                 {
                     std::cout.write(receiving_buffer_.data(), bytes_received);
                     std::cout << '\n' << std::flush;
                 }
                 Receive();
+            } else
+            {
+                std::cout << error_code.message() << std::endl;
             }
         }
-        );
+    );
+}
+
+void Peer::RunContext()
+{
     io_context_.run();
 }
 
