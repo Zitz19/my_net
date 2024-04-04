@@ -3,8 +3,8 @@
 
 #include "peer.h"
 
-Peer::Peer(boost::asio::ip::address address, uint16_t port)
-    : socket_{io_context_}
+Peer::Peer(boost::asio::io_context &io_context, address address, uint16_t port)
+    : socket_{io_context}
     , listen_endpoint_{address, port}
 {
     socket_.open(boost::asio::ip::udp::v4());
@@ -41,11 +41,6 @@ void Peer::Receive()
 void Peer::StopReceive()
 {
     socket_.close();
-}
-
-void Peer::RunContext()
-{
-    io_context_.run();
 }
 
 void Peer::Send(boost::asio::mutable_buffer send_data)

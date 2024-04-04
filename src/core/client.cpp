@@ -6,12 +6,12 @@
 
 Net::Net(Config config)
     : hostname_(config.name_)
-    , peer_(boost::asio::ip::address_v4::any(), config.port_)
+    , peer_(io_context_, address_v4::any(), config.port_)
 {
-    std::list<boost::asio::ip::address> roots;
+    std::list<address> roots;
     for (std::string addr : config.roots_)
     {
-        roots.push_back(boost::asio::ip::make_address(addr));
+        roots.push_back(make_address(addr));
     }
     peer_.SetRemoteEndpoints(roots, config.port_);
     SetupHandler();
@@ -51,15 +51,15 @@ void Net::SetupHandler()
 
 void Net::Receive()
 {
-    boost::asio::io_context::work idle_work(peer_.io_context_);
-    thread_ = std::thread([this] { peer_.RunContext(); });
+    boost::asio::io_context::work idle_work(io_context_);
+    receiving_thread_ = std::thread([this] { io_context_.run(); });
     peer_.Receive();
 }
 
 void Net::Stop()
 {
     peer_.StopReceive();
-    thread_.join();
+    receiving_thread_.join();
 
 }
 

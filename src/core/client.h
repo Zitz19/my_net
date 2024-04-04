@@ -5,12 +5,15 @@
 #include "config/config.h"
 #include "peer.h"
 
+using namespace boost::asio::ip;
+
 class Net
 {
 private:
     std::string hostname_;
+    boost::asio::io_context io_context_;
     Peer peer_;
-    std::thread thread_;
+    std::thread receiving_thread_;
 
 public:
     Net(Config config);

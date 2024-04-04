@@ -7,7 +7,7 @@
 
 typedef boost::function<void (const boost::system::error_code&, size_t bytes_transferred)> Handler;
 
-using boost::asio::ip::udp;
+using namespace boost::asio::ip;
 
 class Peer
 {
@@ -24,14 +24,13 @@ protected:
     const std::size_t max_datagram_size_ = 1024;
 
 public:
-    Peer(boost::asio::ip::address address, uint16_t port);
+    Peer(boost::asio::io_context &io_context, address address, uint16_t port);
 
-    void SetRemoteEndpoints(std::list<boost::asio::ip::address> &remote_addresses, uint16_t port);
+    void SetRemoteEndpoints(std::list<address> &remote_addresses, uint16_t port);
     void Send(boost::asio::mutable_buffer send_data);
 
     const std::array<char, 1024> &GetReceiveBuffer();
     void SetupReceiver(Handler handler);
     void Receive();
     void StopReceive();
-    void RunContext();
 };
