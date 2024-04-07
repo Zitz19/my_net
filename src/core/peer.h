@@ -5,6 +5,7 @@
 #include <array>
 #include <queue>
 #include <boost/function.hpp>
+#include "packet/packet.h"
 
 typedef boost::function<void (const boost::system::error_code&, size_t bytes_transferred)> Handler;
 
@@ -22,13 +23,13 @@ private:
 protected:
     udp::socket socket_;
     udp::endpoint listen_endpoint_;
-    const std::size_t max_datagram_size_ = 1024;
+    const std::size_t max_datagram_size_ = 1500;
 
 public:
     Peer(boost::asio::io_context &io_context, address address, uint16_t port);
 
     void SetRemoteEndpoints(std::list<address> &remote_addresses, uint16_t port);
-    void Send(boost::asio::mutable_buffer send_data);
+    void Send(std::string send_data);
 
     const std::array<char, 1024> &GetReceiveBuffer();
     std::queue<udp::endpoint> &GetAnswersQueue();

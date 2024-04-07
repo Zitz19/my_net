@@ -51,12 +51,26 @@ void Peer::StopReceive()
     socket_.close();
 }
 
-void Peer::Send(boost::asio::mutable_buffer send_data)
+void Peer::Send(std::string send_data)
 {
     for (auto& remote_endpoint : remote_endpoints_)
     {
+        Packet packet(listen_endpoint_.address().to_string().c_str(), remote_endpoint.address().to_string().c_str());
+        bool is_cutted;
+        std::variant var = packet.SetMessage(send_data.c_str(), send_data.size(), is_cutted);
+        if (is_cutted)
+        {
+            for (auto p : std::get<std::list<Packet>>(var))
+            {
+                socket_.send_to(
+                    boost::asio::buffer(p.ToString(), max_datagram_size_),
+                    remote_endpoint
+        );
+            }
+        }
+        std::cout << boost::asio::buffer(std::get<Packet>(var).ToString(), max_datagram_size_).size() << std::endl;
         socket_.send_to(
-            boost::asio::buffer(send_data, max_datagram_size_),
+            boost::asio::buffer(std::get<Packet>(var).ToString(), max_datagram_size_),
             remote_endpoint
         );
     }
