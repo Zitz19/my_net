@@ -3,6 +3,7 @@
 #include <boost/asio.hpp>
 #include <list>
 #include <array>
+#include <queue>
 #include <boost/function.hpp>
 
 typedef boost::function<void (const boost::system::error_code&, size_t bytes_transferred)> Handler;
@@ -15,9 +16,9 @@ private:
     std::list<udp::endpoint> remote_endpoints_;
     std::array<char, 1024> receiving_buffer_;
     Handler handler_;
+    std::queue<udp::endpoint> answers_queue_;
 
-public:
-    boost::asio::io_context io_context_;
+
 protected:
     udp::socket socket_;
     udp::endpoint listen_endpoint_;
@@ -30,6 +31,7 @@ public:
     void Send(boost::asio::mutable_buffer send_data);
 
     const std::array<char, 1024> &GetReceiveBuffer();
+    std::queue<udp::endpoint> &GetAnswersQueue();
     void SetupReceiver(Handler handler);
     void Receive();
     void StopReceive();

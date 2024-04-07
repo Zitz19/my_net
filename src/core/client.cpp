@@ -30,12 +30,13 @@ void Net::HandleReceive(const boost::system::error_code &error, size_t bytes_rec
         { 
             std::cout.write("INFO: broadcast message was received", 36);
             std::cout << '\n' << std::flush;
-        }
-        else if (received_message.find(hostname_) == std::string::npos)
+        } else if (received_message.find(hostname_) == std::string::npos)
         {
             std::cout.write(received_data.data(), bytes_received);
             std::cout << '\n' << std::flush;
         }
+        std:: cout << peer_.GetAnswersQueue().front() << std::endl;
+        peer_.GetAnswersQueue().pop();
         peer_.Receive();
     }
 }
@@ -52,14 +53,14 @@ void Net::SetupHandler()
 void Net::Receive()
 {
     boost::asio::io_context::work idle_work(io_context_);
-    receiving_thread_ = std::thread([this] { io_context_.run(); });
+    main_thread_ = std::thread([this] { io_context_.run(); });
     peer_.Receive();
 }
 
 void Net::Stop()
 {
     peer_.StopReceive();
-    receiving_thread_.join();
+    main_thread_.join();
 
 }
 

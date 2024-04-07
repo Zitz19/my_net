@@ -25,6 +25,11 @@ const std::array<char, 1024> &Peer::GetReceiveBuffer()
     return receiving_buffer_;
 }
 
+std::queue<udp::endpoint> &Peer::GetAnswersQueue()
+{
+    return answers_queue_;
+}
+
 void Peer::SetupReceiver(Handler handler)
 {
     handler_ = handler;
@@ -32,8 +37,11 @@ void Peer::SetupReceiver(Handler handler)
 
 void Peer::Receive()
 {
-    socket_.async_receive(
+    udp::endpoint sender_ep;
+    answers_queue_.push(sender_ep);
+    socket_.async_receive_from(
         boost::asio::buffer(receiving_buffer_),
+        sender_ep,
         boost::bind(handler_, boost::asio::placeholders::error, boost::asio::placeholders::bytes_transferred)
     );
 }

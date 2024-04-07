@@ -13,7 +13,7 @@ private:
     std::string hostname_;
     boost::asio::io_context io_context_;
     Peer peer_;
-    std::thread receiving_thread_;
+    std::thread main_thread_;
 
 public:
     Net(Config config);
