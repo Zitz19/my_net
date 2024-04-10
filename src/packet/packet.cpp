@@ -53,14 +53,68 @@ std::string FixedLength(uint64_t value, int digits = 5) {
     return result;
 }
 
+uint8_t GetOctet(const char *ip_addr, uint8_t octet_index)
+{
+    uint8_t octet = 0;
+    uint8_t start_pos, end_pos;
+    for (start_pos = 0; start_pos < std::strlen(ip_addr) && octet_index > 0; ++start_pos)
+    {
+        if (ip_addr[start_pos] == '.')
+        {
+            octet_index--;
+        }
+    }
+    for (end_pos = start_pos + 1; end_pos < std::strlen(ip_addr); ++end_pos)
+    {
+        if (ip_addr[end_pos] == '.')
+        {
+            break;
+        }
+    }
+    for (uint8_t i = start_pos; i < end_pos; ++i)
+    {
+        octet *= 10;
+        octet += ip_addr[i] - '0';
+    }
+    return octet;
+}
+
+#include <iostream>
 char *Packet::ToString()
 {
-    uint16_t packet_size = 2 * ip_len_ + 1 /* format */ + 5 /* UINT16_MAX length */ + std::strlen(message_);
+    uint16_t packet_size = 2 * 12 + 1 /* format */ + 5 /* UINT16_MAX length */ + std::strlen(message_);
     char *data = new char[packet_size];
-    std::memcpy(data, sender_ip_, ip_len_);
+
+    /* Sender IP */
+    std::memcpy(data, FixedLength(GetOctet(sender_ip_, 0), 3).c_str(), 3);
+    std::memcpy(data + 3, FixedLength(GetOctet(sender_ip_, 1), 3).c_str(), 3);
+    std::memcpy(data + 6, FixedLength(GetOctet(sender_ip_, 2), 3).c_str(), 3);
+    std::memcpy(data + 9, FixedLength(GetOctet(sender_ip_, 3), 3).c_str(), 3);
+
+    std::cout << data << std::endl;
+    
+    /* Format */
     data[ip_len_] = char(packet_format_);
-    std::memcpy(data + ip_len_ + 1, receiver_ip_, ip_len_);
-    std::memcpy(data + 2 * ip_len_ + 1, FixedLength(std::strlen(message_)).c_str(), 5);
-    std::memcpy(data + 2 * ip_len_ + 1 + 5, message_, std::strlen(message_));
+
+    std::cout << data << std::endl;
+
+    /* Receiver IP */
+    std::memcpy(data, FixedLength(GetOctet(receiver_ip_, 0), 3).c_str(), 3);
+    std::memcpy(data + 13, FixedLength(GetOctet(receiver_ip_, 1), 3).c_str(), 3);
+    std::memcpy(data + 16, FixedLength(GetOctet(receiver_ip_, 2), 3).c_str(), 3);
+    std::memcpy(data + 19, FixedLength(GetOctet(receiver_ip_, 3), 3).c_str(), 3);
+
+    std::cout << data << std::endl;
+    
+    /* Message Size */
+    std::memcpy(data + 2 * 12 + 1, FixedLength(std::strlen(message_)).c_str(), 5);
+
+    std::cout << data << std::endl;
+
+    /* Message */
+    std::memcpy(data + 2 * 12 + 1 + 5, message_, std::strlen(message_));
+
+    std::cout << data << std::endl;
+
     return data;
 }

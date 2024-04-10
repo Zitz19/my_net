@@ -68,7 +68,6 @@ void Peer::Send(std::string send_data)
         );
             }
         }
-        std::cout << boost::asio::buffer(std::get<Packet>(var).ToString(), max_datagram_size_).size() << std::endl;
         socket_.send_to(
             boost::asio::buffer(std::get<Packet>(var).ToString(), max_datagram_size_),
             remote_endpoint
