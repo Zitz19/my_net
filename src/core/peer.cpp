@@ -55,7 +55,7 @@ void Peer::Send(std::string send_data)
 {
     for (auto& remote_endpoint : remote_endpoints_)
     {
-        Packet packet(listen_endpoint_.address().to_string().c_str(), remote_endpoint.address().to_string().c_str());
+        Packet packet = Packet(listen_endpoint_.address().to_string().c_str(), remote_endpoint.address().to_string().c_str());
         bool is_cutted;
         std::variant var = packet.SetMessage(send_data.c_str(), send_data.size(), is_cutted);
         if (is_cutted)

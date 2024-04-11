@@ -82,7 +82,8 @@ uint8_t GetOctet(const char *ip_addr, uint8_t octet_index)
 #include <iostream>
 char *Packet::ToString()
 {
-    uint16_t packet_size = 2 * 12 + 1 /* format */ + 5 /* UINT16_MAX length */ + std::strlen(message_);
+    uint16_t message_size = std::strlen(message_);
+    uint16_t packet_size = 2 * 12 + 1 /* format */ + 5 /* UINT16_MAX length */ + message_size + 1;
     char *data = new char[packet_size];
 
     /* Sender IP */
@@ -90,31 +91,22 @@ char *Packet::ToString()
     std::memcpy(data + 3, FixedLength(GetOctet(sender_ip_, 1), 3).c_str(), 3);
     std::memcpy(data + 6, FixedLength(GetOctet(sender_ip_, 2), 3).c_str(), 3);
     std::memcpy(data + 9, FixedLength(GetOctet(sender_ip_, 3), 3).c_str(), 3);
-
-    std::cout << data << std::endl;
     
     /* Format */
-    data[ip_len_] = char(packet_format_);
-
-    std::cout << data << std::endl;
+    data[12] = char(packet_format_);
 
     /* Receiver IP */
-    std::memcpy(data, FixedLength(GetOctet(receiver_ip_, 0), 3).c_str(), 3);
-    std::memcpy(data + 13, FixedLength(GetOctet(receiver_ip_, 1), 3).c_str(), 3);
-    std::memcpy(data + 16, FixedLength(GetOctet(receiver_ip_, 2), 3).c_str(), 3);
-    std::memcpy(data + 19, FixedLength(GetOctet(receiver_ip_, 3), 3).c_str(), 3);
-
-    std::cout << data << std::endl;
+    std::memcpy(data + 13, FixedLength(GetOctet(receiver_ip_, 0), 3).c_str(), 3);
+    std::memcpy(data + 16, FixedLength(GetOctet(receiver_ip_, 1), 3).c_str(), 3);
+    std::memcpy(data + 19, FixedLength(GetOctet(receiver_ip_, 2), 3).c_str(), 3);
+    std::memcpy(data + 22, FixedLength(GetOctet(receiver_ip_, 3), 3).c_str(), 3);
     
     /* Message Size */
-    std::memcpy(data + 2 * 12 + 1, FixedLength(std::strlen(message_)).c_str(), 5);
-
-    std::cout << data << std::endl;
+    std::memcpy(data + 2 * 12 + 1, FixedLength(message_size).c_str(), 5);
 
     /* Message */
-    std::memcpy(data + 2 * 12 + 1 + 5, message_, std::strlen(message_));
-
-    std::cout << data << std::endl;
+    std::memcpy(data + 2 * 12 + 1 + 5, message_, message_size);
+    data[2 * 12 + 1 + 5 + message_size] = '\0';
 
     return data;
 }
