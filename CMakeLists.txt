@@ -9,6 +9,7 @@ add_executable(StudNet
     src/core/client.cpp
     src/core/peer.cpp
     src/config/config.cpp
+    src/packet/packet.cpp
 )
 target_include_directories(StudNet PRIVATE "include" "src" "/home/zitz/my_net/include/boost_1_84_0")
 

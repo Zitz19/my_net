@@ -66,21 +66,16 @@ void Net::Stop()
 void Net::Send()
 {
     bool is_end = false;
-    std::string name = hostname_;
     std::string message = "<connected>";
-    std::string buffer = name + ": " + message;
-    peer_.Send(boost::asio::buffer(buffer));
-    message.clear();
+    peer_.Send(message);
     while (std::getline(std::cin, message))
     {
-        buffer.clear();
         if (message == "-exit")
         {
             message = "<disconnected>";
             is_end = true;
         }
-        buffer = name + ": " + message;
-        peer_.Send(boost::asio::buffer(buffer));
+        peer_.Send(message);
         if (is_end)
         {
             return;

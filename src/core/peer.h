@@ -4,6 +4,30 @@
 #include <list>
 #include <array>
 #include <boost/function.hpp>
+#include <ifaddrs.h>
+#include <unordered_map>
+#include <bitset>
+
+/* Можно сделать виртуальный родительский класс интерфейс
+ и сделать реализации для всех необходимых протоколов */
+class NetInterface
+{
+public:
+    const uint16_t kAddressFamily;
+    const std::string kIpv4Address;
+    const std::string kIpv4FullMask;
+    const std::string kIpv4ShortMask;
+
+    NetInterface(uint16_t address_family, std::string ipv4_address, std::string ipv4_full_mask, std::string ipv4_short_mask)
+    : kAddressFamily(address_family)
+    , kIpv4Address(ipv4_address)
+    , kIpv4FullMask(ipv4_full_mask)
+    , kIpv4ShortMask(ipv4_short_mask) {}
+};
+
+std::unordered_map<std::string, NetInterface> GetAllInterfaces();
+
+bool IsNetContainsAddress(boost::asio::ip::network_v4 const &network, boost::asio::ip::address_v4 const &ip);
 
 typedef boost::function<void (const boost::system::error_code&, size_t bytes_transferred)> Handler;
 
@@ -15,6 +39,7 @@ private:
     std::list<udp::endpoint> remote_endpoints_;
     std::array<char, 1024> receiving_buffer_;
     Handler handler_;
+    std::unordered_map<std::string, NetInterface> interfaces_;
 
 public:
     boost::asio::io_context io_context_;
@@ -27,7 +52,7 @@ public:
     Peer(boost::asio::io_context &io_context, address address, uint16_t port);
 
     void SetRemoteEndpoints(std::list<address> &remote_addresses, uint16_t port);
-    void Send(boost::asio::mutable_buffer send_data);
+    void Send(std::string send_data);
 
     const std::array<char, 1024> &GetReceiveBuffer();
     void SetupReceiver(Handler handler);
