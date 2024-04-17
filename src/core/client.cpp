@@ -33,8 +33,8 @@ void Net::HandleReceive(const boost::system::error_code &error, size_t bytes_rec
         }
         else if (received_message.find(hostname_) == std::string::npos)
         {
-            std::cout.write(received_data.data(), bytes_received);
-            std::cout << '\n' << std::flush;
+            Packet received_packet = Packet(received_message);
+            std::cout << received_packet.Print() << std::flush;
         }
         peer_.Receive();
     }

@@ -2,7 +2,6 @@
 #include <boost/bind/bind.hpp>
 
 #include "peer.h"
-#include "packet/packet.h"
 
 std::unordered_map<std::string, NetInterface> GetAllInterfaces()
 {

@@ -7,6 +7,7 @@
 #include <ifaddrs.h>
 #include <unordered_map>
 #include <bitset>
+#include "packet/packet.h"
 
 /* Можно сделать виртуальный родительский класс интерфейс
  и сделать реализации для всех необходимых протоколов */

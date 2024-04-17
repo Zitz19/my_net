@@ -1,6 +1,7 @@
 #include <cstdint>
 #include <variant>
 #include <list>
+#include "magic_enum.hpp"
 
 /**
  * MY PACKET FORMAT
@@ -10,9 +11,9 @@
 
 enum class PacketFormat
 {
-    kSearch,
-    kStandart,
-    kInfo
+    SEARCH,
+    STANDART,
+    INFO
 };
 
 class Packet
@@ -32,9 +33,11 @@ private:
     uint16_t message_size_;
     bool is_last_;
 public:
-    Packet(const char *sender_ip, const char * receiver_ip, PacketFormat packet_format = PacketFormat::kStandart, bool is_last = true);
+    Packet(const char *sender_ip, const char * receiver_ip, PacketFormat packet_format = PacketFormat::STANDART, bool is_last = true);
     std::variant<Packet, std::list<Packet>> SetMessage(const char *message, uint64_t message_size, bool &is_cutted);
     char *ToString();
+    Packet(const std::string &received_data);
+    std::string Print();
 };
 
 std::string FixedLength(uint64_t value, int digits = 5);
