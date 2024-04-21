@@ -139,6 +139,7 @@ Peer::Peer(boost::asio::io_context &io_context, address address, uint16_t port)
 {
     socket_.open(boost::asio::ip::udp::v4());
     socket_.set_option(udp::socket::reuse_address(true));
+    socket_.set_option(boost::asio::socket_base::broadcast(true));
     socket_.bind(listen_endpoint_);
     interfaces_ = GetAllInterfaces();
 }
@@ -207,4 +208,74 @@ void Peer::Send(std::string send_data)
             }
         }
     }
+}
+
+void Peer::SearchPeers()
+{
+    for (auto &interface : interfaces_)
+    {
+        std::string broadcast_address = "";
+        std::string network_address = interface.second.kIpv4Address;
+        uint8_t octets_without_changes = std::atoi(interface.second.kIpv4ShortMask.c_str()) / 8;
+        uint8_t octets_to_modify = 4 - octets_without_changes;
+        if (octets_to_modify > 0)
+        {
+            uint pos = 0;
+            while (octets_without_changes > 0)
+            {
+                pos++;
+                if (network_address[pos] == '.')
+                {
+                    octets_without_changes--;
+                }
+            }
+            broadcast_address = network_address.substr(0, pos + 1);
+            for ( uint8_t i = 0; i < octets_to_modify; ++i)
+            {
+                broadcast_address += "255";
+                if (i < octets_to_modify - 1)
+                {
+                    broadcast_address += '.';
+                }
+            }
+        } else
+        {
+            broadcast_address = network_address;
+        }
+        Packet packet = Packet(interface.second.kIpv4Address.c_str(), broadcast_address.c_str(), PacketFormat::SEARCH);
+        udp::endpoint broadcast_enpoint{boost::asio::ip::make_address_v4(broadcast_address), (uint16_t)listen_endpoint_.port()};
+        socket_.send_to(
+            boost::asio::buffer(std::string(packet.ToString()), max_datagram_size_),
+            broadcast_enpoint);
+    }
+}
+
+void Peer::SendAnswerOnSearch(address remote_address, uint16_t port)
+{
+    std::string sending_address;
+    for (auto &interface : interfaces_)
+    {
+        if (IsNetContainsAddress(boost::asio::ip::make_network_v4(interface.first + '/' + interface.second.kIpv4ShortMask), remote_address.to_v4()))
+        {
+            sending_address = interface.second.kIpv4Address;
+            break;
+        }
+    }
+    Packet packet = Packet(sending_address.c_str(), remote_address.to_string().c_str(), PacketFormat::IAMHERE);
+    udp::endpoint receiver_endpoint{remote_address, port};
+    socket_.send_to(
+            boost::asio::buffer(std::string(packet.ToString()), max_datagram_size_),
+            receiver_endpoint);
+}
+
+bool Peer::IsMe(std::string address)
+{
+    for (auto &interface : interfaces_)
+    {
+        if (interface.second.kIpv4Address == address)
+        {
+            return true;
+        }
+    }
+    return false;
 }

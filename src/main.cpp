@@ -28,21 +28,9 @@ int main()
             client.Send();
             break;
         case 2:
-            // std::cout << "Scanning on neighbours...\n";
-            // broadcast_socket.open(boost::asio::ip::udp::v4(), error);
-            // if (!error)
-            // {
-            //     broadcast_socket.set_option(boost::asio::socket_base::broadcast(true));
-            //     boost::asio::ip::udp::endpoint broadcastEnpoint(boost::asio::ip::address_v4::broadcast(boost::asio::ip::address_v4::from_string(net_config.ip_), 
-            //                                                                                            boost::asio::ip::address_v4::from_string("255.255.255.0")), 
-            //                                                     9012);
-            //     broadcast_socket.send_to(boost::asio::buffer("<broadcast message>", 128), broadcastEnpoint);
-            //     broadcast_socket.close();
-            // } else
-            // {
-            //     std::cout << error.what();
-            // }
-            // break;
+            std::cout << "Scanning on neighbours...\n";
+            client.SearchNeighbours();
+            break;
         default:
             break;
         }

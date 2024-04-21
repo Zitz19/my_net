@@ -26,14 +26,18 @@ void Net::HandleReceive(const boost::system::error_code &error, size_t bytes_rec
             received_data.begin(),
             received_data.begin() + bytes_received
         };
-        if (received_message.find("broadcast") != std::string::npos)
+        Packet received_packet = Packet(received_message);
+        if (received_packet.format() == PacketFormat::SEARCH and not peer_.IsMe(received_packet.sender_ip()))
         { 
-            std::cout.write("INFO: broadcast message was received", 36);
-            std::cout << '\n' << std::flush;
+            std::cout << received_packet.Print() << std::flush;
+            peer_.SendAnswerOnSearch(boost::asio::ip::make_address(received_packet.sender_ip()), 9012); // config should be used
         }
-        else if (received_message.find(hostname_) == std::string::npos)
+        else if (received_packet.format() == PacketFormat::STANDART)
         {
-            Packet received_packet = Packet(received_message);
+            std::cout << received_packet.Print() << std::flush;
+        }
+        else if (received_packet.format() == PacketFormat::IAMHERE)
+        {
             std::cout << received_packet.Print() << std::flush;
         }
         peer_.Receive();
@@ -82,4 +86,9 @@ void Net::Send()
         }
         std::cout << "You: " << message << '\n';
     }
+}
+
+void Net::SearchNeighbours()
+{
+    peer_.SearchPeers();
 }

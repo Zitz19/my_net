@@ -124,7 +124,7 @@ Packet::Packet(const std::string &received_data)
     std::string sender_ip = "";
     for (uint8_t octet_index = 0; octet_index < 4; octet_index++)
     {
-        sender_ip += std::to_string(std::atoi(received_data.substr(pos, 3).c_str()));\
+        sender_ip += std::to_string(std::atoi(received_data.substr(pos, 3).c_str()));
         sender_ip += octet_index < 3 ? "." : "";
         pos += 3;
     }
@@ -133,7 +133,7 @@ Packet::Packet(const std::string &received_data)
     std::string receiver_ip = "";
     for (uint8_t octet_index = 0; octet_index < 4; octet_index++)
     {
-        receiver_ip += std::to_string(std::atoi(received_data.substr(pos, 3).c_str()));\
+        receiver_ip += std::to_string(std::atoi(received_data.substr(pos, 3).c_str()));
         receiver_ip += octet_index < 3 ? "." : "";
         pos += 3;
     }
@@ -154,6 +154,10 @@ std::string Packet::Print()
     buff += std::string(magic_enum::enum_name(packet_format_)) + " PACKET FORMAT\n";
     buff += "> Receiver IP: " + std::string(receiver_ip_) + '\n';
     buff += "> Sender IP: " + std::string(sender_ip_) + '\n';
+    if (packet_format_ == PacketFormat::SEARCH or packet_format_ == PacketFormat::IAMHERE)
+    {
+        return buff;
+    }
     buff += "> Data size: " + std::to_string(message_size_) + ". Data: \n";
     buff += std::string(message_, message_size_) + '\n';
     return buff;

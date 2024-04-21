@@ -11,9 +11,10 @@
 
 enum class PacketFormat
 {
-    SEARCH,
-    STANDART,
-    INFO
+    SEARCH = 1,
+    IAMHERE = 2,
+    STANDART = 3,
+    INFO = 4
 };
 
 class Packet
@@ -30,7 +31,7 @@ private:
     static uint64_t packet_id_;
     PacketFormat packet_format_;
     char message_[max_message_size_];
-    uint16_t message_size_;
+    uint16_t message_size_ = 0;
     bool is_last_;
 public:
     Packet(const char *sender_ip, const char * receiver_ip, PacketFormat packet_format = PacketFormat::STANDART, bool is_last = true);
@@ -38,6 +39,8 @@ public:
     char *ToString();
     Packet(const std::string &received_data);
     std::string Print();
+    PacketFormat format() { return packet_format_; };
+    std::string sender_ip() { return std::string(sender_ip_); };
 };
 
 std::string FixedLength(uint64_t value, int digits = 5);

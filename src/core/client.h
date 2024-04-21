@@ -23,4 +23,5 @@ public:
     void Receive();
     void Stop();
     void Send();
+    void SearchNeighbours();
 };

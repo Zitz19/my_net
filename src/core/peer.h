@@ -54,6 +54,9 @@ public:
 
     void SetRemoteEndpoints(std::list<address> &remote_addresses, uint16_t port);
     void Send(std::string send_data);
+    void SearchPeers();
+    void SendAnswerOnSearch(address remote_address, uint16_t port);
+    bool IsMe(std::string address);
 
     const std::array<char, 1024> &GetReceiveBuffer();
     void SetupReceiver(Handler handler);
