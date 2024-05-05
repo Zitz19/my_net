@@ -1,7 +1,7 @@
 #include <boost/asio.hpp>
 #include <iostream>
 
-#include "core/client.h"
+#include "core/app.h"
 #include "config/config.h"
 
 using boost::asio::ip::udp;

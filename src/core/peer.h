@@ -8,6 +8,7 @@
 #include <unordered_map>
 #include <bitset>
 #include "packet/packet.h"
+#include "routing/map.h"
 
 /* Можно сделать виртуальный родительский класс интерфейс
  и сделать реализации для всех необходимых протоколов */
@@ -37,10 +38,13 @@ using namespace boost::asio::ip;
 class Peer
 {
 private:
+    Route
+
     std::list<udp::endpoint> remote_endpoints_;
     std::array<char, 1024> receiving_buffer_;
     Handler handler_;
     std::unordered_map<std::string, NetInterface> interfaces_;
+    uint16_t port_;
 
 public:
     boost::asio::io_context io_context_;
@@ -54,8 +58,10 @@ public:
 
     void SetRemoteEndpoints(std::list<address> &remote_addresses, uint16_t port);
     void Send(std::string send_data);
+    void SendTo(address remote_address, std::string send_data, PacketFormat format);
     void SearchPeers();
     void SendAnswerOnSearch(address remote_address, uint16_t port);
+    void AddRemoteEndpoint(boost::asio::ip::address remote_address, uint16_t port);
     bool IsMe(std::string address);
 
     const std::array<char, 1024> &GetReceiveBuffer();

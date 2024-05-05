@@ -10,15 +10,16 @@ class Config
 {
 public:
     const std::string version_;
+    std::string ip_;
     const uint16_t port_;
-    const std::string ip_;
-    const std::string name_;
+    std::string name_;
+    const uint32_t pid_;
 
 public:
     std::list<std::string> roots_;
 
 public:
-    Config(const std::string version, const std::string port, const std::string ip, const std::string name);
+    Config(const std::string version, const std::string port, const uint32_t pid);
 
     static Config ParseConfig(const std::string config_name);
 };

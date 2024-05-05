@@ -6,10 +6,11 @@ enable_testing()
 
 add_executable(StudNet
     src/main.cpp
-    src/core/client.cpp
+    src/core/app.cpp
     src/core/peer.cpp
     src/config/config.cpp
     src/packet/packet.cpp
+    src/routing/map.cpp
 )
 target_include_directories(StudNet PRIVATE "include" "src" "/home/zitz/my_net/include/boost_1_84_0")
 

@@ -14,7 +14,8 @@ enum class PacketFormat
     SEARCH = 1,
     IAMHERE = 2,
     STANDART = 3,
-    INFO = 4
+    HELLO = 4,
+    INFO = 5
 };
 
 class Packet

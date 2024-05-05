@@ -136,6 +136,7 @@ bool IsNetContainsAddress(boost::asio::ip::network_v4 const &network, boost::asi
 Peer::Peer(boost::asio::io_context &io_context, address address, uint16_t port)
     : socket_{io_context}
     , listen_endpoint_{address, port}
+    , port_(port)
 {
     socket_.open(boost::asio::ip::udp::v4());
     socket_.set_option(udp::socket::reuse_address(true));
@@ -150,6 +151,15 @@ void Peer::SetRemoteEndpoints(std::list<boost::asio::ip::address> &remote_addres
     {
         remote_endpoints_.push_back(udp::endpoint{addr, port});
     }
+}
+
+void Peer::AddRemoteEndpoint(boost::asio::ip::address remote_address, uint16_t port)
+{
+    udp::endpoint ep{remote_address, port};
+    if (std::find(remote_endpoints_.begin(), remote_endpoints_.end(), ep) == remote_endpoints_.end())
+    {
+        remote_endpoints_.push_back(udp::endpoint{remote_address, port});
+    }    
 }
 
 const std::array<char, 1024> &Peer::GetReceiveBuffer()
@@ -206,6 +216,38 @@ void Peer::Send(std::string send_data)
                     remote_endpoint
                 );
             }
+        }
+    }
+}
+
+void Peer::SendTo(address remote_address, std::string send_data, PacketFormat format)
+{
+    std::string sending_address;
+    for (auto &interface : interfaces_)
+    {
+        if (IsNetContainsAddress(boost::asio::ip::make_network_v4(interface.first + '/' + interface.second.kIpv4ShortMask), remote_address.to_v4()))
+        {
+            sending_address = interface.second.kIpv4Address;
+            break;
+        }
+    }
+    Packet packet = Packet(sending_address.c_str(), remote_address.to_string().c_str(), format);
+    bool is_cutted;
+    std::variant var = packet.SetMessage(send_data.c_str(), send_data.size(), is_cutted);
+    if (!is_cutted)
+    {
+        socket_.send_to(
+            boost::asio::buffer(std::string(std::get<Packet>(var).ToString()), max_datagram_size_),
+            udp::endpoint{remote_address, port_}
+        );
+    } else
+    {
+        for (auto &p : std::get<std::list<Packet>>(var))
+        {
+            socket_.send_to(
+                boost::asio::buffer(std::string(p.ToString()), max_datagram_size_),
+                udp::endpoint{remote_address, port_}
+            );
         }
     }
 }

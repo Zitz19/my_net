@@ -2,11 +2,12 @@
 #include <boost/asio.hpp>
 #include <boost/bind/bind.hpp>
 
-#include "client.h"
+#include "app.h"
 
-Net::Net(Config config)
-    : hostname_(config.name_)
+App::App(Config config)
+    : config_(config)
     , peer_(io_context_, address_v4::any(), config.port_)
+    , port_(config.port_)
 {
     std::list<address> roots;
     for (std::string addr : config.roots_)
@@ -17,7 +18,12 @@ Net::Net(Config config)
     SetupHandler();
 }
 
-void Net::HandleReceive(const boost::system::error_code &error, size_t bytes_received)
+bool App::CheckRoot(boost::asio::ip::address root)
+{
+
+}
+
+void App::HandleReceive(const boost::system::error_code &error, size_t bytes_received)
 {
     if (!error.failed() && bytes_received > 0)
     {
@@ -39,35 +45,36 @@ void Net::HandleReceive(const boost::system::error_code &error, size_t bytes_rec
         else if (received_packet.format() == PacketFormat::IAMHERE)
         {
             std::cout << received_packet.Print() << std::flush;
+            peer_.AddRemoteEndpoint(boost::asio::ip::make_address(received_packet.sender_ip()), port_);
         }
         peer_.Receive();
     }
 }
 
-void Net::SetupHandler()
+void App::SetupHandler()
 {
-    Handler handler = boost::bind(&Net::HandleReceive,
+    Handler handler = boost::bind(&App::HandleReceive,
                                   this,
                                   boost::asio::placeholders::error,
                                   boost::asio::placeholders::bytes_transferred);
     peer_.SetupReceiver(handler);
 }
 
-void Net::Receive()
+void App::Receive()
 {
     boost::asio::io_context::work idle_work(io_context_);
     receiving_thread_ = std::thread([this] { io_context_.run(); });
     peer_.Receive();
 }
 
-void Net::Stop()
+void App::Stop()
 {
     peer_.StopReceive();
     receiving_thread_.join();
 
 }
 
-void Net::Send()
+void App::Send()
 {
     bool is_end = false;
     std::string message = "<connected>";
@@ -88,7 +95,7 @@ void Net::Send()
     }
 }
 
-void Net::SearchNeighbours()
+void App::SearchNeighbours()
 {
     peer_.SearchPeers();
 }
