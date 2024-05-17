@@ -1,52 +1,129 @@
+#include <iostream>
 #include <cstring>
 #include <string>
 #include <algorithm>
 
 #include "packet.h"
 
-uint64_t Packet::packet_id_ = 0;
-
-Packet::Packet(const char *sender_ip, const char * receiver_ip, PacketFormat packet_format, bool is_last)
+Packet::Packet(uint32_t receiver_pid, uint32_t sender_pid, const std::string &data, PacketFormat packet_format, bool is_last)
+    : receiver_pid_(receiver_pid)
+    , sender_pid_(sender_pid)
+    , packet_format_(packet_format)
+    , is_last_(is_last)
+    , data_(data)
 {
-    Packet::packet_id_++;
-    std::memcpy(sender_ip_, sender_ip, ip_len_);
-    sender_ip_[ip_len_] = '\0';
-    std::memcpy(receiver_ip_, receiver_ip, ip_len_);
-    receiver_ip_[ip_len_] = '\0';
-    packet_format_ = packet_format;
-    is_last_ = is_last;
-}
-
-std::variant<Packet, std::list<Packet>> Packet::SetMessage(const char *message, uint64_t message_size, bool &is_cutted)
-{
-    uint64_t parts_num = message_size / max_message_size_ + (message_size != max_message_size_);
-    is_cutted = parts_num > 1;
-    if (!is_cutted)
+    if (data.size() > max_message_size_)
     {
-        message_size_ = message_size;
-        std::memcpy(message_, message, message_size);
-        std::variant<Packet, std::list<Packet>> var{*this};
-        return var;
+        /* Throwing an exeption as a better variant */
+        std::cerr << "Data of packet is too long. Please, use another interface!" << std::endl;
+        data_ = std::string(data.begin(), data.begin() + max_message_size_);
+        data_size_ = max_message_size_;
     } else
     {
-        std::list<Packet> packets;
-        is_last_ = false;
-        message_size_ = max_message_size_;
-        std::memcpy(message_, message, max_message_size_);
-        packets.push_back(*this);
-        for (uint64_t index = 1; index < parts_num - 1; ++index)
-        {
-            Packet packet(sender_ip_, receiver_ip_, packet_format_, false);
-            std::memcpy(packet.message_, message + index * max_message_size_, max_message_size_);
-            packet.message_size_ = max_message_size_;
-            packets.push_back(std::move(packet));
-        }
-        Packet packet(sender_ip_, receiver_ip_, packet_format_, true);
-        packet.message_size_ = message_size % max_message_size_;
-        std::memcpy(packet.message_, message + (parts_num - 1) * max_message_size_, packet.message_size_);
-        packets.push_back(std::move(packet));
-        std::variant<Packet, std::list<Packet>> var{packets};
-        return var;
+        data_ = data;
+        data_size_ = data.size();
+    }
+}
+
+std::list<Packet> Packet::MakePacketList(int32_t receiver_pid, uint32_t sender_pid, const std::string &data, PacketFormat packet_format)
+{
+    std::list<Packet> packets;
+    uint64_t data_size = data.size();
+    uint64_t parts_num = data_size / max_message_size_ + (data_size != max_message_size_);
+    uint64_t last_packet_size = data_size % max_message_size_;
+    for (uint64_t index = 1; index < parts_num - 1; ++index)
+    {
+        Packet packet(
+            receiver_pid, 
+            sender_pid, 
+            std::string(data.begin() + index * max_message_size_, data.begin() + (index + 1) * max_message_size_), 
+            packet_format, 
+            false);
+        packets.push_back(packet);
+    }
+    Packet packet(
+            receiver_pid, 
+            sender_pid, 
+            std::string(data.end() - last_packet_size, data.end()), 
+            packet_format, 
+            true);
+    packets.push_back(packet);
+    return packets;
+}
+
+Packet Packet::MakePacketFromReceivedData(const std::string &data)
+{
+    uint32_t receiver_pid = (uint32_t)std::atoi(std::string(data.begin(), data.begin() + 5).c_str());
+    PacketFormat format = PacketFormat(data[5] - '0');
+    uint32_t sender_pid = (uint32_t)std::atoi(std::string(data.begin() + 6, data.begin() + 11).c_str());
+
+    uint16_t offset = 11;
+    if (format == PacketFormat::PING or format == PacketFormat::PING_ANSWER)
+    {
+        address_v4 receiver_ip(std::atoi(std::string(
+            data.begin() + offset,
+            data.begin() + offset + 10
+        ).c_str()));
+
+        offset = 21;
+        address_v4 sender_ip(std::atoi(std::string(
+            data.begin() + offset,
+            data.begin() + offset + 10
+        ).c_str()));
+
+        offset = 31;
+        posix_time::ptime sent_time = posix_time::time_from_string(
+            std::string(data.begin() + offset, data.begin() + offset + timestamp_len_)
+        );
+
+        offset += timestamp_len_;
+        u_int16_t ping_seq_num = (uint16_t)std::atoi(std::string(data.begin() + offset, data.begin() + offset + 5).c_str());
+
+        offset += 5;
+        // Should be removed
+        uint16_t data_size;
+        data_size = std::atoi(std::string(data.begin() + offset, data.begin() + offset + 5).c_str());
+        const std::string &received_data = std::string(data.end() - data_size, data.end());
+        Packet packet(receiver_pid, sender_pid, received_data, format, true);
+        packet.SetReceiverIP(receiver_ip);
+        packet.SetSenderIP(sender_ip);
+        packet.SetPingSentTime(sent_time);
+        packet.SetPingSequenceNumber(ping_seq_num);
+        return packet;
+    } else if (format == PacketFormat::STANDART)
+    {
+        uint16_t data_size;
+        data_size = std::atoi(std::string(data.begin() + offset, data.begin() + offset + 5).c_str());
+        const std::string &received_data = std::string(data.end() - data_size, data.end());
+        Packet packet(receiver_pid, sender_pid, received_data, format, true);
+        return packet;
+    } else if (format == PacketFormat::RTM_UPD)
+    {
+        uint32_t src_pid = std::atoi(std::string(
+            data.begin() + offset,
+            data.begin() + offset + 5
+        ).c_str());
+        offset = 16;
+
+        uint32_t dst_pid = std::atoi(std::string(
+            data.begin() + offset,
+            data.begin() + offset + 5
+        ).c_str());
+        offset = 21;
+
+        uint64_t path_cost = std::atoi(std::string(
+            data.begin() + offset,
+            data.begin() + offset + 5
+        ).c_str());
+        Packet packet(receiver_pid, sender_pid, "", format, true);
+        packet.SetSrcPID(src_pid);
+        packet.SetDstPID(dst_pid);
+        packet.SetPathCost(path_cost);
+        return packet;
+    } else
+    {
+        std::cerr << "Unkkown packet type." << std::endl;
+        return Packet(receiver_pid, sender_pid, "", format, true);
     }
 }
 
@@ -61,104 +138,58 @@ std::string FixedLength(uint64_t value, int digits)
     return result;
 }
 
-uint8_t GetOctet(const char *ip_addr, uint8_t octet_index)
+std::string Packet::ToString()
 {
-    uint8_t octet = 0;
-    uint8_t start_pos, end_pos;
-    for (start_pos = 0; start_pos < std::strlen(ip_addr) && octet_index > 0; ++start_pos)
+    std::string packet_str = 
+        FixedLength(receiver_pid_, 5) + 
+        std::to_string(int(packet_format_)) + 
+        FixedLength(sender_pid_, 5);
+    if (packet_format_ == PacketFormat::PING or packet_format_ == PacketFormat::PING_ANSWER)
     {
-        if (ip_addr[start_pos] == '.')
-        {
-            octet_index--;
-        }
-    }
-    for (end_pos = start_pos + 1; end_pos < std::strlen(ip_addr); ++end_pos)
+        auto receiver_ip_int = receiver_ip_.to_v4().to_uint();
+        auto sender_ip_int = sender_ip_.to_v4().to_uint();
+        packet_str += FixedLength(receiver_ip_int, 10);
+        packet_str += FixedLength(sender_ip_int, 10);
+        packet_str += posix_time::to_simple_string(ping_sent_time_);
+        packet_str += FixedLength(ping_sequence_number_, 5);
+        packet_str += FixedLength(data_size_, 5) + data_;
+    } else if (packet_format_ == PacketFormat::STANDART)
     {
-        if (ip_addr[end_pos] == '.')
-        {
-            break;
-        }
-    }
-    for (uint8_t i = start_pos; i < end_pos; ++i)
+        /* message only here */
+        packet_str += FixedLength(data_size_, 5) + data_;
+    } else if (packet_format_ == PacketFormat::RTM_UPD)
     {
-        octet *= 10;
-        octet += ip_addr[i] - '0';
+        packet_str += FixedLength(src_pid_, 5);
+        packet_str += FixedLength(dst_pid_, 5);
+        packet_str += FixedLength(path_cost_, 5);
     }
-    return octet;
-}
 
-char *Packet::ToString()
-{
-    uint16_t message_size = message_size_;
-    uint16_t packet_size = 2 * 12 + 1 /* format */ + 5 /* UINT16_MAX length */ + message_size + 1;
-    char *data = new char[packet_size];
-
-    /* Sender IP */
-    std::memcpy(data, FixedLength(GetOctet(sender_ip_, 0), 3).c_str(), 3);
-    std::memcpy(data + 3, FixedLength(GetOctet(sender_ip_, 1), 3).c_str(), 3);
-    std::memcpy(data + 6, FixedLength(GetOctet(sender_ip_, 2), 3).c_str(), 3);
-    std::memcpy(data + 9, FixedLength(GetOctet(sender_ip_, 3), 3).c_str(), 3);
-    
-    /* Format */
-    data[12] = char(packet_format_);
-
-    /* Receiver IP */
-    std::memcpy(data + 13, FixedLength(GetOctet(receiver_ip_, 0), 3).c_str(), 3);
-    std::memcpy(data + 16, FixedLength(GetOctet(receiver_ip_, 1), 3).c_str(), 3);
-    std::memcpy(data + 19, FixedLength(GetOctet(receiver_ip_, 2), 3).c_str(), 3);
-    std::memcpy(data + 22, FixedLength(GetOctet(receiver_ip_, 3), 3).c_str(), 3);
-    
-    /* Message Size */
-    std::memcpy(data + 2 * 12 + 1, FixedLength(message_size).c_str(), 5);
-
-    /* Message */
-    std::memcpy(data + 2 * 12 + 1 + 5, message_, message_size);
-    data[2 * 12 + 1 + 5 + message_size] = '\0';
-
-    return data;
-}
-
-Packet::Packet(const std::string &received_data)
-{
-    uint32_t pos = 0;
-    std::string sender_ip = "";
-    for (uint8_t octet_index = 0; octet_index < 4; octet_index++)
-    {
-        sender_ip += std::to_string(std::atoi(received_data.substr(pos, 3).c_str()));
-        sender_ip += octet_index < 3 ? "." : "";
-        pos += 3;
-    }
-    PacketFormat format = (PacketFormat) received_data[pos];
-    pos += 1;
-    std::string receiver_ip = "";
-    for (uint8_t octet_index = 0; octet_index < 4; octet_index++)
-    {
-        receiver_ip += std::to_string(std::atoi(received_data.substr(pos, 3).c_str()));
-        receiver_ip += octet_index < 3 ? "." : "";
-        pos += 3;
-    }
-    uint16_t message_size = std::atoi(received_data.substr(pos, 5).c_str());
-    pos += 5;
-    std::string message = received_data.substr(pos, message_size);
-    
-    std::memcpy(sender_ip_, sender_ip.c_str(), sender_ip.size());
-    std::memcpy(receiver_ip_, receiver_ip.c_str(), receiver_ip.size());
-    message_size_ = message_size;
-    packet_format_ = format;
-    std::memcpy(message_, message.c_str(), message.size());
+    return packet_str;
 }
 
 std::string Packet::Print()
 {
     std::string buff = "";
     buff += std::string(magic_enum::enum_name(packet_format_)) + " PACKET FORMAT\n";
-    buff += "> Receiver IP: " + std::string(receiver_ip_) + '\n';
-    buff += "> Sender IP: " + std::string(sender_ip_) + '\n';
-    if (packet_format_ == PacketFormat::SEARCH or packet_format_ == PacketFormat::IAMHERE)
+    buff += "> Receiver PID: " + std::to_string(receiver_pid_) + '\n';
+    buff += "> Sender PID: " + std::to_string(sender_pid_) + '\n';
+    if (packet_format_ == PacketFormat::STANDART)
     {
-        return buff;
+        buff += "> Data size: " + std::to_string(data_size_) + ". Data: \n";
+        buff += data_ + '\n';
     }
-    buff += "> Data size: " + std::to_string(message_size_) + ". Data: \n";
-    buff += std::string(message_, message_size_) + '\n';
+    else if (packet_format_ == PacketFormat::PING or packet_format_ == PacketFormat::PING_ANSWER)
+    {
+        buff += "> Receiver IP: " + receiver_ip_.to_string() + '\n';
+        buff += "> Sender IP: " + sender_ip_.to_string() + '\n';
+        buff += "> Ping sequence number: " + std::to_string(ping_sequence_number_) + '\n';
+        buff += "> Data size: " + std::to_string(data_size_) + ". Data: \n";
+        buff += data_ + '\n';
+    } else if (packet_format_ == PacketFormat::RTM_UPD)
+    {
+        buff += "> Source PID: " + std::to_string(src_pid_) + '\n';
+        buff += "> Destination PID: " + std::to_string(dst_pid_) + '\n';
+        buff += "> Path cost: " + std::to_string(path_cost_) + '\n';
+    }
     return buff;
 }

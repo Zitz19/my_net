@@ -19,7 +19,7 @@ public:
     std::list<std::string> roots_;
 
 public:
-    Config(const std::string version, const std::string port, const uint32_t pid);
+    Config(const std::string version, const uint16_t port, const uint32_t pid);
 
     static Config ParseConfig(const std::string config_name);
 };

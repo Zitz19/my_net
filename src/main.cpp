@@ -9,8 +9,8 @@ using boost::asio::ip::udp;
 int main()
 {
     std::cout << "Hello from StudNet!\n";
-    Net client{Config::ParseConfig("config.json")};
-    client.Receive();
+    App net{Config::ParseConfig("config.json")};
+    net.Start();
 
     while (true)
     {
@@ -22,14 +22,14 @@ int main()
         switch (choice)
         {
         case 0:
-            client.Stop();
+            net.Stop();
             return 0;
         case 1:
-            client.Send();
+            net.PingRoots();
             break;
         case 2:
             std::cout << "Scanning on neighbours...\n";
-            client.SearchNeighbours();
+            net.SearchNeighbours();
             break;
         default:
             break;
