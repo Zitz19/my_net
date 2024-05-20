@@ -19,11 +19,13 @@ private:
 
 public:
     RouteMap() {}
+    std::unordered_map<TableKey, std::unordered_map<TableKey, PathCost>> &GetLinkStateTable() { return ls_table_; }
 
     void PrintRouteMap();
 
     Packet UpdateLink(TableKey src, TableKey dst, PathCost cost);
     PathCost GetPathCost(TableKey src, TableKey dst) { return ls_table_[src][dst]; };
+    void RemovePID(TableKey pid);
 
     static uint64_t CalculatePathCostfromTime(posix_time::time_duration ping_time);
 };

@@ -207,36 +207,39 @@ void Peer::HandleReceive(const boost::system::error_code &error, size_t bytes_re
                 ping_stat_[answering_ep].answer_time = posix_time::microsec_clock::universal_time() - received_packet.ping_sent_time();
                 ip_to_pid_[answering_ep.address().to_v4()] = received_packet.sender_pid();
             }
-            PrintPingStat();
-            Packet rtm_upd_packet = map_.UpdateLink(received_packet.src_pid(), received_packet.dst_pid(), RouteMap::CalculatePathCostfromTime(ping_stat_[answering_ep].answer_time));
+            Packet rtm_upd_packet = map_.UpdateLink(received_packet.sender_pid(), received_packet.receiver_pid(), RouteMap::CalculatePathCostfromTime(ping_stat_[answering_ep].answer_time));
+            rtm_upd_packet.SetSenderPID(pid_);
             /* Send routemap update */
             for (const auto &neighbour : ping_stat_)
             {
+                rtm_upd_packet.SetReceiverPID(ip_to_pid_[neighbour.first.address().to_v4()]);
                 SendTo(neighbour.first, rtm_upd_packet);
             }
-            //std::cout << "CHECK PING_ANSW: " << answering_ep << " REPLIES: " << ping_stat_[answering_ep].num_replies << std::endl;
+            // std::cout << "CHECK PING_ANSW: " << answering_ep << " REPLIES: " << ping_stat_[answering_ep].num_replies << std::endl;
         } else if (received_packet.format() == PacketFormat::RTM_UPD)
         {
-            std::cout << received_packet.Print() << std::flush;
-            if (received_packet.path_cost() != map_.GetPathCost(received_packet.sender_pid(), pid_))
+            // std::cout << received_packet.Print() << std::flush;
+            if (received_packet.path_cost() != map_.GetPathCost(received_packet.src_pid(), received_packet.dst_pid()))
             {
-                map_.UpdateLink(pid_, received_packet.sender_pid(), received_packet.path_cost());
-                network_v4 net_of_sender_pid;
-                for (auto interface : interfaces_)
-                {
-                    net_of_sender_pid = make_network_v4(interface.first);
-                    if (IsNetContainsAddress(net_of_sender_pid, sender_ep_.address().to_v4()))
-                    {
-                        break;
-                    }
-                }
-                for (const auto &neighbour : ping_stat_)
-                {
-                    if (not IsNetContainsAddress(net_of_sender_pid, neighbour.first.address().to_v4()))
-                    {
-                        SendTo(neighbour.first, received_packet);
-                    }
-                }
+                map_.UpdateLink(received_packet.src_pid(), received_packet.dst_pid(), received_packet.path_cost());
+                // network_v4 net_of_sender_pid;
+                // for (auto interface : interfaces_)
+                // {
+                //     net_of_sender_pid = make_network_v4(interface.first);
+                //     if (IsNetContainsAddress(net_of_sender_pid, sender_ep_.address().to_v4()))
+                //     {
+                //         break;
+                //     }
+                // }
+                // received_packet.SetSenderPID(pid_);
+                // for (const auto &neighbour : ping_stat_)
+                // {
+                //     if (not IsNetContainsAddress(net_of_sender_pid, neighbour.first.address().to_v4()))
+                //     {
+                //         received_packet.SetReceiverPID(ip_to_pid_[neighbour.first.address().to_v4()]);
+                //         SendTo(neighbour.first, received_packet);
+                //     }
+                // }
             }
         } else
         {
@@ -418,9 +421,28 @@ void Peer::SearchNeighbours(bool remove_inactive)
             {
                 //std::cout << "CHECK ERASE: " << neighbour->first << std::endl;
                 /* Remove neighbour */
+                uint32_t removed_pid = ip_to_pid_[neighbour->first.address().to_v4()];
+                Packet rtm_upd_packet = map_.UpdateLink(pid_, removed_pid, 0);
+                std::cout << "--REMOVED PID: " << removed_pid << std::endl;
+                uint64_t paths_sum = 0;
+                for (auto connection : map_.GetLinkStateTable()[removed_pid])
+                {
+                    paths_sum += connection.second;
+                }
+                if (paths_sum == 0)
+                {
+                    map_.RemovePID(removed_pid);
+                }
                 ip_to_pid_.erase(neighbour->first.address().to_v4());
                 ping_stat_.erase(neighbour++);
                 PrintPingStat();
+                rtm_upd_packet.SetSenderPID(pid_);
+                /* Send routemap update */
+                for (const auto &neighbour : ping_stat_)
+                {
+                    rtm_upd_packet.SetReceiverPID(ip_to_pid_[neighbour.first.address().to_v4()]);
+                    SendTo(neighbour.first, rtm_upd_packet);
+                }
             } else
             {
                 //std::cout << "CHECK PING: " << neighbour->first << std::endl;
@@ -431,7 +453,7 @@ void Peer::SearchNeighbours(bool remove_inactive)
             }
         }
     }
-    map_.PrintRouteMap();
+    // map_.PrintRouteMap();
     for (auto interface : interfaces_)
     {
         network_v4 interface_net = make_network_v4(interface.first);

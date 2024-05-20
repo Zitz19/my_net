@@ -56,7 +56,9 @@ public:
     static Packet MakePacketFromReceivedData(const std::string &data);
     std::string ToString();
     std::string Print();
+    void SetReceiverPID(uint32_t receiver_pid) { receiver_pid_ = receiver_pid; }
     uint32_t receiver_pid() const { return receiver_pid_; }
+    void SetSenderPID(uint32_t sender_pid) { sender_pid_ = sender_pid; }
     uint32_t sender_pid() const { return sender_pid_; }
     PacketFormat format() const { return packet_format_; };
     address receiver_ip() const { return receiver_ip_; };

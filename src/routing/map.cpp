@@ -52,7 +52,7 @@ void RouteMap::PrintRouteMap()
         std::cout << line;
         line_cnt++;
     }
-    std::cout << "     " + std::string(width - 5 + 1, '-') + '\n';
+    std::cout << "     " + std::string(width - 5 + 1, '-') + "\n\n";
 }
 
 Packet RouteMap::UpdateLink(TableKey src, TableKey dst, PathCost cost)
@@ -60,11 +60,22 @@ Packet RouteMap::UpdateLink(TableKey src, TableKey dst, PathCost cost)
     ls_table_[src][dst] = cost;
     ls_table_[dst][src] = cost;
     Packet rtm_upd_packet(dst, src, "", PacketFormat::RTM_UPD);
+    rtm_upd_packet.SetSrcPID(src);
+    rtm_upd_packet.SetDstPID(dst);
     rtm_upd_packet.SetPathCost(cost);
     return rtm_upd_packet;
 }
 
+void RouteMap::RemovePID(uint32_t pid)
+{
+    for (auto src : ls_table_)
+    {
+        src.second.erase(pid);
+    }
+    ls_table_.erase(pid);
+}
+
 uint64_t RouteMap::CalculatePathCostfromTime(posix_time::time_duration ping_time)
 {
-    return ping_time.total_milliseconds() / 2 + 1;
+    return ping_time.total_milliseconds() / 5 + 1;
 }
